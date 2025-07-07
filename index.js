@@ -8,7 +8,15 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 app.use(bodyParser.json());
 
-// Step 1: Initial greeting + ASR (speech recognition)
+// ➕ Chat-Verlauf zwischenspeichern (einfach im Arbeitsspeicher)
+let conversationHistory = [
+  {
+    role: 'system',
+    content: 'Du bist ein professioneller Telefonberater für Star-Biker (www.star-biker.com) – ein Shop für Elektromobilität. Du kennst die Modelle Chopper M1P Custom, Chopper 6.0s Basic/Premium, Shelwy Italian, Chopper M1PS Knight, alle technischen Daten, Farben, Preise, Führerscheinregeln, Lieferzeiten (1–3 Tage), sowie Rückgabe, Service und Abholung. Du antwortest ausführlich, höflich und auf Deutsch.'
+  }
+];
+
+// 📞 Start des Anrufs
 app.get('/webhook/answer', (req, res) => {
   const ncco = [
     {
@@ -29,21 +37,37 @@ app.get('/webhook/answer', (req, res) => {
   res.json(ncco);
 });
 
-// Step 2: ASR callback → send to ChatGPT → respond with TTS
+// 🧠 Sprachverarbeitung + GPT + Rückfrage
 app.post('/webhook/asr', async (req, res) => {
-  const userText = req.body.speech?.results?.[0]?.text || 'Ich habe das nicht verstanden.';
+  const userInput = req.body.speech?.results?.[0]?.text;
 
-  let gptAnswer = 'Entschuldigung, ich konnte Ihre Anfrage nicht verstehen.';
+  if (!userInput) {
+    return res.json([
+      {
+        action: 'talk',
+        voiceName: 'Vicki',
+        text: 'Entschuldigung, ich habe Sie nicht verstanden. Können Sie das bitte wiederholen?'
+      },
+      {
+        action: 'input',
+        eventUrl: ['https://star-biker-voicebot.onrender.com/webhook/asr'],
+        type: ['speech'],
+        speech: { language: 'de-DE', endOnSilence: 1 }
+      }
+    ]);
+  }
+
+  // ⏺ Verlauf fortsetzen
+  conversationHistory.push({ role: 'user', content: userInput });
+
+  let gptReply = 'Entschuldigung, gerade gab es ein Problem mit dem Kundenservice.';
 
   try {
-    const openaiRes = await axios.post(
+    const gptRes = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
         model: 'gpt-4',
-        messages: [
-          { role: 'system', content: 'Du bist ein professioneller Kundenservice-Bot für einen Elektromobilitäts-Shop namens Star-Biker. Beantworte Fragen höflich, präzise und auf Deutsch.' },
-          { role: 'user', content: userText }
-        ],
+        messages: conversationHistory,
         temperature: 0.7
       },
       {
@@ -54,19 +78,30 @@ app.post('/webhook/asr', async (req, res) => {
       }
     );
 
-    gptAnswer = openaiRes.data.choices[0].message.content;
-  } catch (err) {
-    console.error('GPT-Fehler:', err.message);
+    gptReply = gptRes.data.choices[0].message.content;
+    conversationHistory.push({ role: 'assistant', content: gptReply });
+  } catch (error) {
+    console.error('GPT Fehler:', error.message);
   }
 
-  const ncco = [
+  res.json([
     {
       action: 'talk',
       voiceName: 'Vicki',
-      text: gptAnswer
+      text: gptReply
+    },
+    {
+      action: 'talk',
+      voiceName: 'Vicki',
+      text: 'Kann ich sonst noch etwas für Sie tun?'
+    },
+    {
+      action: 'input',
+      eventUrl: ['https://star-biker-voicebot.onrender.com/webhook/asr'],
+      type: ['speech'],
+      speech: { language: 'de-DE', endOnSilence: 1 }
     }
-  ];
-  res.json(ncco);
+  ]);
 });
 
 app.listen(port, () => {
