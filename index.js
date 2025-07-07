@@ -6,17 +6,22 @@ const app = express();
 const port = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Logging aktivieren
 app.use(bodyParser.json());
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
+});
 
-// Einfacher Verlauf im RAM – für Demo-Zwecke
+// Einfache Verlaufsspeicherung im RAM
 let conversationHistory = [
   {
     role: 'system',
-    content: `Du bist ein professioneller Telefonberater für Star-Biker (www.star-biker.com) – ein Shop für Elektromobilität. Du kennst die Modelle Chopper M1P Custom, Chopper 6.0s Basic/Premium, Shelwy Italian, Chopper M1PS Knight, technische Daten, Farben, Preise, Führerscheinregeln, Lieferzeiten (1–3 Tage), Rückgabe, Service und Abholung. Du berätst freundlich, verständlich und professionell auf Deutsch.`
+    content: `Du bist ein professioneller Kundenberater für Star-Biker (www.star-biker.com), einem Shop für E‑Chopper und Elektroroller. Du kennst Modelle wie Chopper M1P Custom, Chopper 6.0s, Shelwy Italian und Knight Edition, inklusive Preise, Farben, Technik, Lieferzeit (1–3 Tage), Führerscheinregeln (AM, B, B196), Abholung im Store und Service. Antworte freundlich, ehrlich und auf Deutsch.`
   }
 ];
 
-// Begrüßung beim Anruf
+// Begrüßung bei eingehendem Anruf
 app.get('/webhook/answer', (req, res) => {
   const ncco = [
     {
@@ -37,12 +42,22 @@ app.get('/webhook/answer', (req, res) => {
   res.json(ncco);
 });
 
-// GPT-Sprachverarbeitung
+// Sprachverarbeitung mit GPT
 app.post('/webhook/asr', async (req, res) => {
-  const userInput = req.body.speech?.results?.[0]?.text;
+  console.log('📥 Eingehende Spracheingabe:');
+  console.log(JSON.stringify(req.body, null, 2));
 
-  // Wenn Spracheingabe fehlt
+  let userInput = '';
+  try {
+    if (req.body?.speech?.results?.length > 0) {
+      userInput = req.body.speech.results[0].text;
+    }
+  } catch (err) {
+    console.error('❌ Fehler beim Extrahieren von Spracheingabe:', err.message);
+  }
+
   if (!userInput) {
+    console.warn('⚠️ Keine Sprache erkannt. Sende Wiederholung.');
     return res.json([
       {
         action: 'talk',
@@ -53,22 +68,19 @@ app.post('/webhook/asr', async (req, res) => {
         action: 'input',
         eventUrl: ['https://star-biker-voicebot.onrender.com/webhook/asr'],
         type: ['speech'],
-        speech: {
-          language: 'de-DE',
-          endOnSilence: 1
-        }
+        speech: { language: 'de-DE', endOnSilence: 1 }
       }
     ]);
   }
 
-  // Eingabe speichern
+  // Verlauf fortsetzen
   conversationHistory.push({ role: 'user', content: userInput });
 
-  let gptReply = 'Entschuldigung, es gab ein Problem mit dem Kundenservice.';
+  let gptReply = 'Entschuldigung, ich konnte Ihre Frage gerade nicht beantworten.';
 
   try {
-    const gptRes = await axios.post(
-      'https://api.openai.com/v1/chat/completions', // ✅ korrekte URL
+    const gptResponse = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
       {
         model: 'gpt-4',
         messages: conversationHistory,
@@ -82,13 +94,14 @@ app.post('/webhook/asr', async (req, res) => {
       }
     );
 
-    gptReply = gptRes.data.choices[0].message.content;
+    gptReply = gptResponse.data.choices[0].message.content;
     conversationHistory.push({ role: 'assistant', content: gptReply });
+
+    console.log('🧠 GPT-Antwort:', gptReply);
   } catch (error) {
-    console.error('GPT Fehler:', error.message);
+    console.error('❌ GPT-Fehler:', error.response?.data || error.message);
   }
 
-  // Antwort + Nachfrage + erneute Spracheingabe
   res.json([
     {
       action: 'talk',
@@ -98,7 +111,7 @@ app.post('/webhook/asr', async (req, res) => {
     {
       action: 'talk',
       voiceName: 'Vicki',
-      text: 'Möchten Sie noch etwas wissen?'
+      text: 'Kann ich sonst noch etwas für Sie tun?'
     },
     {
       action: 'input',
@@ -112,7 +125,6 @@ app.post('/webhook/asr', async (req, res) => {
   ]);
 });
 
-// Start
 app.listen(port, () => {
-  console.log(`✅ StarBiker GPT Voicebot läuft auf Port ${port}`);
+  console.log(`✅ StarBiker Voicebot läuft auf Port ${port}`);
 });
