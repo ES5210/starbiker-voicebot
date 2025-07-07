@@ -1,4 +1,3 @@
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
@@ -19,7 +18,7 @@ app.get('/webhook/answer', (req, res) => {
     },
     {
       action: 'input',
-      eventUrl: [`${req.protocol}://${req.get('host')}/webhook/asr`],
+      eventUrl: ['https://star-biker-voicebot.onrender.com/webhook/asr'],
       type: ['speech'],
       speech: {
         language: 'de-DE',
