@@ -13,7 +13,7 @@ app.all('/webhook/answer', (req, res) => {
   const ncco = [
     {
       action: 'talk',
-      voiceName: 'Carl',
+      voiceName: 'Vicki',
       text: 'Willkommen bei Star-Biker. Wie kann ich Ihnen helfen?'
     },
     {
@@ -37,7 +37,7 @@ app.post('/webhook/asr', async (req, res) => {
     return res.json([
       {
         action: 'talk',
-        voiceName: 'Carl',
+        voiceName: 'Vicki',
         text: 'Entschuldigung, ich habe Sie leider nicht verstanden. Können Sie das bitte wiederholen?'
       },
       {
@@ -85,12 +85,12 @@ app.post('/webhook/asr', async (req, res) => {
   res.json([
     {
       action: 'talk',
-      voiceName: 'Carl',
+      voiceName: 'Vicki',
       text: gptReply
     },
     {
       action: 'talk',
-      voiceName: 'Carl',
+      voiceName: 'Vicki',
       text: 'Kann ich sonst noch etwas für Sie tun?'
     },
     {
