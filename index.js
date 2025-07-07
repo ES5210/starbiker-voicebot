@@ -6,85 +6,95 @@ const app = express();
 const port = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Logging aktivieren
+// Middleware
 app.use(bodyParser.json());
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// Einfache Verlaufsspeicherung im RAM
+// Basiswissen für GPT
 let conversationHistory = [
   {
     role: 'system',
-    content: `Du bist ein professioneller Kundenberater für Star-Biker (www.star-biker.com), einem Shop für E‑Chopper und Elektroroller. Du kennst Modelle wie Chopper M1P Custom, Chopper 6.0s, Shelwy Italian und Knight Edition, inklusive Preise, Farben, Technik, Lieferzeit (1–3 Tage), Führerscheinregeln (AM, B, B196), Abholung im Store und Service. Antworte freundlich, ehrlich und auf Deutsch.`
+    content: `
+Du bist ein professioneller, freundlicher Kundenberater für Star-Biker (https://www.star-biker.com).
+Du kennst E-Roller und Chopper wie:
+- M1P Custom
+- Chopper 6.0s
+- Knight Edition
+- Shelwy Italian
+
+Antworten:
+- in klarem, natürlichem Deutsch
+- kompakt, ehrlich, hilfreich
+- Preis, Führerschein (AM, B, B196), Lieferzeit (1–3 Tage), Service und Abholung im Store
+
+Vermeide Fantasieantworten. Wenn du etwas nicht weißt, sag ehrlich "Dazu habe ich leider keine Informationen".
+    `.trim()
   }
 ];
 
-// Begrüßung bei eingehendem Anruf
+// Einstieg: Begrüßung + Sprache aktivieren
 app.get('/webhook/answer', (req, res) => {
   const ncco = [
     {
       action: 'talk',
-      voiceName: 'Vicki',
-      text: 'Willkommen bei Star-Biker. Wie kann ich Ihnen helfen?'
+      voiceName: 'Marlene',
+      text: 'Willkommen bei Star-Biker. Was möchten Sie wissen?'
     },
     {
       action: 'input',
-      eventUrl: ['https://star-biker-voicebot.onrender.com/webhook/asr'],
+      eventUrl: [`${req.protocol}://${req.get('host')}/webhook/asr`],
       type: ['speech'],
       speech: {
         language: 'de-DE',
-        endOnSilence: 1
+        endOnSilence: 2 // mehr Zeit zum Sprechen
       }
     }
   ];
   res.json(ncco);
 });
 
-// Sprachverarbeitung mit GPT
+// GPT-Sprachverarbeitung
 app.post('/webhook/asr', async (req, res) => {
-  console.log('📥 Eingehende Spracheingabe:');
+  console.log('📥 Spracheingabe erhalten:');
   console.log(JSON.stringify(req.body, null, 2));
 
-  let userInput = '';
-  try {
-    if (req.body?.speech?.results?.length > 0) {
-      userInput = req.body.speech.results[0].text;
-    }
-  } catch (err) {
-    console.error('❌ Fehler beim Extrahieren von Spracheingabe:', err.message);
-  }
+  const userInput = req.body?.speech?.results?.[0]?.text || '';
 
   if (!userInput) {
-    console.warn('⚠️ Keine Sprache erkannt. Sende Wiederholung.');
+    console.warn('⚠️ Keine Sprache erkannt.');
     return res.json([
       {
         action: 'talk',
-        voiceName: 'Vicki',
-        text: 'Ich habe Sie leider nicht verstanden. Können Sie das bitte wiederholen?'
+        voiceName: 'Marlene',
+        text: 'Entschuldigung, ich habe Sie nicht verstanden. Bitte wiederholen Sie Ihre Frage.'
       },
       {
         action: 'input',
-        eventUrl: ['https://star-biker-voicebot.onrender.com/webhook/asr'],
+        eventUrl: [`${req.protocol}://${req.get('host')}/webhook/asr`],
         type: ['speech'],
-        speech: { language: 'de-DE', endOnSilence: 1 }
+        speech: {
+          language: 'de-DE',
+          endOnSilence: 2
+        }
       }
     ]);
   }
 
-  // Verlauf fortsetzen
+  // Verlauf speichern
   conversationHistory.push({ role: 'user', content: userInput });
 
-  let gptReply = 'Entschuldigung, ich konnte Ihre Frage gerade nicht beantworten.';
+  let replyText = 'Es gab leider ein Problem bei der Antwort.';
 
   try {
-    const gptResponse = await axios.post(
+    const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
         model: 'gpt-3.5-turbo',
         messages: conversationHistory,
-        temperature: 0.7
+        temperature: 0.6
       },
       {
         headers: {
@@ -94,32 +104,32 @@ app.post('/webhook/asr', async (req, res) => {
       }
     );
 
-    gptReply = gptResponse.data.choices[0].message.content;
-    conversationHistory.push({ role: 'assistant', content: gptReply });
+    replyText = response.data.choices[0].message.content.trim();
+    conversationHistory.push({ role: 'assistant', content: replyText });
 
-    console.log('🧠 GPT-Antwort:', gptReply);
-  } catch (error) {
-    console.error('❌ GPT-Fehler:', error.response?.data || error.message);
+    console.log('🧠 GPT Antwort:', replyText);
+  } catch (err) {
+    console.error('❌ GPT Fehler:', err.response?.data || err.message);
   }
 
   res.json([
     {
       action: 'talk',
-      voiceName: 'Vicki',
-      text: gptReply
+      voiceName: 'Marlene',
+      text: replyText
     },
     {
       action: 'talk',
-      voiceName: 'Vicki',
-      text: 'Kann ich sonst noch etwas für Sie tun?'
+      voiceName: 'Marlene',
+      text: 'Kann ich noch bei etwas anderem helfen?'
     },
     {
       action: 'input',
-      eventUrl: ['https://star-biker-voicebot.onrender.com/webhook/asr'],
+      eventUrl: [`${req.protocol}://${req.get('host')}/webhook/asr`],
       type: ['speech'],
       speech: {
         language: 'de-DE',
-        endOnSilence: 1
+        endOnSilence: 2
       }
     }
   ]);
