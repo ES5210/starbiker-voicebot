@@ -1,3 +1,4 @@
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
@@ -8,7 +9,7 @@ const port = process.env.PORT || 10000;
 
 app.use(bodyParser.json());
 
-app.get('/webhook/answer', (req, res) => {
+app.all('/webhook/answer', (req, res) => {
   const ncco = [
     {
       action: 'talk',
