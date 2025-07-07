@@ -1,13 +1,14 @@
 {
   "name": "starbiker-gpt-voicebot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "axios": "^1.6.8",
     "body-parser": "^1.20.2",
-    "axios": "^1.6.8"
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2"
   }
 }

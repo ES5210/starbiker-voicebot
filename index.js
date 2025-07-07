@@ -1,47 +1,19 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
+require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const port = process.env.PORT || 10000;
 
-// Middleware
 app.use(bodyParser.json());
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-  next();
-});
 
-// Basiswissen für GPT
-let conversationHistory = [
-  {
-    role: 'system',
-    content: `
-Du bist ein professioneller, freundlicher Kundenberater für Star-Biker (https://www.star-biker.com).
-Du kennst E-Roller und Chopper wie:
-- M1P Custom
-- Chopper 6.0s
-- Knight Edition
-- Shelwy Italian
-
-Antworten:
-- in klarem, natürlichem Deutsch
-- kompakt, ehrlich, hilfreich
-- Preis, Führerschein (AM, B, B196), Lieferzeit (1–3 Tage), Service und Abholung im Store
-
-Vermeide Fantasieantworten. Wenn du etwas nicht weißt, sag ehrlich "Dazu habe ich leider keine Informationen".
-    `.trim()
-  }
-];
-
-// Einstieg: Begrüßung + Sprache aktivieren
 app.get('/webhook/answer', (req, res) => {
   const ncco = [
     {
       action: 'talk',
-      voiceName: 'Marlene',
-      text: 'Willkommen bei Star-Biker. Was möchten Sie wissen?'
+      voiceName: 'Carl',
+      text: 'Willkommen bei Star-Biker. Wie kann ich Ihnen helfen?'
     },
     {
       action: 'input',
@@ -49,79 +21,76 @@ app.get('/webhook/answer', (req, res) => {
       type: ['speech'],
       speech: {
         language: 'de-DE',
-        endOnSilence: 2 // mehr Zeit zum Sprechen
+        endOnSilence: 2
       }
     }
   ];
   res.json(ncco);
 });
 
-// GPT-Sprachverarbeitung
 app.post('/webhook/asr', async (req, res) => {
-  console.log('📥 Spracheingabe erhalten:');
-  console.log(JSON.stringify(req.body, null, 2));
+  console.log('📥 Spracheingabe:', JSON.stringify(req.body, null, 2));
 
-  const userInput = req.body?.speech?.results?.[0]?.text || '';
-
+  const userInput = req.body?.speech?.results?.[0]?.text;
   if (!userInput) {
-    console.warn('⚠️ Keine Sprache erkannt.');
     return res.json([
       {
         action: 'talk',
-        voiceName: 'Marlene',
-        text: 'Entschuldigung, ich habe Sie nicht verstanden. Bitte wiederholen Sie Ihre Frage.'
+        voiceName: 'Carl',
+        text: 'Entschuldigung, ich habe Sie leider nicht verstanden. Können Sie das bitte wiederholen?'
       },
       {
         action: 'input',
         eventUrl: [`${req.protocol}://${req.get('host')}/webhook/asr`],
         type: ['speech'],
-        speech: {
-          language: 'de-DE',
-          endOnSilence: 2
-        }
+        speech: { language: 'de-DE', endOnSilence: 2 }
       }
     ]);
   }
 
-  // Verlauf speichern
-  conversationHistory.push({ role: 'user', content: userInput });
+  const prompt = [
+    {
+      role: 'system',
+      content: 'Du bist ein professioneller Kundenberater für Star-Biker (www.star-biker.com), einem Shop für E‑Chopper und Elektroroller. Du kennst Modelle wie Chopper M1P Custom, Chopper 6.0s, Shelwy Italian und Knight Edition, inklusive Preise, Farben, Technik, Lieferzeit (1–3 Tage), Führerscheinregeln (AM, B, B196), Abholung im Store und Service. Antworte freundlich, ehrlich und auf Deutsch.'
+    },
+    {
+      role: 'user',
+      content: userInput
+    }
+  ];
 
-  let replyText = 'Es gab leider ein Problem bei der Antwort.';
+  let gptReply = 'Entschuldigung, es gab ein Problem mit dem Kundenservice.';
 
   try {
-    const response = await axios.post(
+    const gptRes = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-3.5-turbo',
-        messages: conversationHistory,
-        temperature: 0.6
+        model: 'gpt-4',
+        messages: prompt,
+        temperature: 0.7
       },
       {
         headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           'Content-Type': 'application/json'
         }
       }
     );
-
-    replyText = response.data.choices[0].message.content.trim();
-    conversationHistory.push({ role: 'assistant', content: replyText });
-
-    console.log('🧠 GPT Antwort:', replyText);
+    gptReply = gptRes.data.choices[0].message.content;
   } catch (err) {
-    console.error('❌ GPT Fehler:', err.response?.data || err.message);
+    console.error('GPT-Fehler:', err.response?.data || err.message);
   }
 
   res.json([
     {
       action: 'talk',
-      voiceName: 'Marlene',
-      text: replyText
+      voiceName: 'Carl',
+      text: gptReply
     },
     {
       action: 'talk',
-      voiceName: 'Marlene',
-      text: 'Kann ich noch bei etwas anderem helfen?'
+      voiceName: 'Carl',
+      text: 'Kann ich sonst noch etwas für Sie tun?'
     },
     {
       action: 'input',
