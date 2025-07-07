@@ -6,12 +6,14 @@ const app = express();
 const port = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Logging aktivieren
 app.use(bodyParser.json());
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
+// Einfache Verlaufsspeicherung im RAM
 let conversationHistory = [
   {
     role: 'system',
@@ -19,6 +21,7 @@ let conversationHistory = [
   }
 ];
 
+// Begrüßung bei eingehendem Anruf
 app.get('/webhook/answer', (req, res) => {
   const ncco = [
     {
@@ -39,6 +42,7 @@ app.get('/webhook/answer', (req, res) => {
   res.json(ncco);
 });
 
+// Sprachverarbeitung mit GPT
 app.post('/webhook/asr', async (req, res) => {
   console.log('📥 Eingehende Spracheingabe:');
   console.log(JSON.stringify(req.body, null, 2));
@@ -69,6 +73,7 @@ app.post('/webhook/asr', async (req, res) => {
     ]);
   }
 
+  // Verlauf fortsetzen
   conversationHistory.push({ role: 'user', content: userInput });
 
   let gptReply = 'Entschuldigung, ich konnte Ihre Frage gerade nicht beantworten.';
@@ -77,7 +82,7 @@ app.post('/webhook/asr', async (req, res) => {
     const gptResponse = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4',
         messages: conversationHistory,
         temperature: 0.7
       },
