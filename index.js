@@ -32,14 +32,14 @@ app.post('/process', async (req, res) => {
     console.log("🔊 Antwort-Audio:", audioUrl);
 
     res.type('text/xml');
-    res.send(\`
+    res.send(`
       <Response>
         <Play>${audioUrl}</Play>
         <Gather input="speech" action="/process" method="POST" timeout="8">
           <Say voice="alice" language="de-DE">Haben Sie noch weitere Fragen?</Say>
         </Gather>
       </Response>
-    \`);
+    `);
   } catch (err) {
     console.error("❌ Fehler:", err);
     res.type('text/xml');
