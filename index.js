@@ -1,13 +1,14 @@
-const express = require('express');
-const app = express();
-const bodyParser = require('body-parser');
-const { handleSpeechToText } = require('./services/deepgram');
-const { generateGPTResponse } = require('./services/openai');
-const { generateSpeech } = require('./services/elevenlabs');
+const express = require("express");
+const bodyParser = require("body-parser");
+const { handleSpeechToText } = require("./services/deepgram");
+const { generateGPTResponse } = require("./services/openai");
+const { generateSpeech } = require("./services/elevenlabs");
 
+const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+// Route 1: Startpunkt /incoming
 app.post("/incoming", (req, res) => {
   res.type("text/xml");
   res.send(`
@@ -24,32 +25,35 @@ app.post("/incoming", (req, res) => {
   `);
 });
 
-app.post('/process', async (req, res) => {
+// Route 2: Dialog fortsetzen /process
+app.post("/process", async (req, res) => {
   try {
-    const userText = await handleSpeechToText(req);
-    console.log("🗣️ Kunde sagt:", userText);
+    const userSpeech = await handleSpeechToText(req.body);
+    console.log("🗣️ Kunde sagt:", userSpeech);
 
-    const gptReply = await generateGPTResponse(userText);
-    console.log("🤖 GPT antwortet:", gptReply);
+    const gptAnswer = await generateGPTResponse(userSpeech);
+    console.log("🤖 GPT antwortet:", gptAnswer);
 
-    const audioUrl = await generateSpeech(gptReply);
-    console.log("🔊 Antwort-Audio:", audioUrl);
+    const mp3Url = await generateSpeech(gptAnswer);
+    console.log("🔊 Audio-URL:", mp3Url);
 
-    res.type('text/xml');
+    res.type("text/xml");
     res.send(`
       <Response>
-        <Play>${audioUrl}</Play>
-        <Gather input="speech" action="/process" method="POST" timeout="8">
-          <Say voice="alice" language="de-DE">Haben Sie noch weitere Fragen?</Say>
+        <Play>${mp3Url}</Play>
+        <Gather input="speech" action="/process" method="POST" timeout="6">
+          <Say voice="Polly.Vicki" language="de-DE">
+            Ich höre zu.
+          </Say>
         </Gather>
       </Response>
     `);
   } catch (err) {
-    console.error("❌ Fehler:", err);
-    res.type('text/xml');
+    console.error("❌ Fehler im Prozess:", err.message);
+    res.type("text/xml");
     res.send(`
       <Response>
-        <Say voice="alice" language="de-DE">Es gab einen Fehler. Bitte versuchen Sie es erneut.</Say>
+        <Say>Es gab ein Problem bei der Verarbeitung. Bitte versuchen Sie es später erneut.</Say>
       </Response>
     `);
   }
@@ -57,5 +61,5 @@ app.post('/process', async (req, res) => {
 
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
-  console.log(`✅ VoiceBot läuft auf Port ${port}`);
+  console.log(`✅ GPT-Voicebot läuft auf Port ${port}`);
 });
