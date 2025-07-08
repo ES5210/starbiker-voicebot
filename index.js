@@ -8,27 +8,21 @@ const { generateSpeech } = require('./services/elevenlabs');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-// Erste Begrüßung
 app.post('/incoming', (req, res) => {
   res.type('text/xml');
-  res.send(`
+  res.send(\`
     <Response>
-      <Say voice="alice" language="de-DE">
-        Willkommen bei StarBiker. Wie kann ich Ihnen helfen?
-      </Say>
-      <Gather input="speech" action="/process" method="POST" timeout="6">
-        <Say>Bitte sagen Sie mir, was Sie brauchen.</Say>
+      <Say voice="alice" language="de-DE">Willkommen bei StarBiker. Wie kann ich Ihnen helfen?</Say>
+      <Gather input="speech" action="/process" method="POST" timeout="8">
+        <Say voice="alice" language="de-DE">Bitte sagen Sie mir, was Sie brauchen.</Say>
       </Gather>
     </Response>
-  `);
+  \`);
 });
 
-// Antwortlogik
 app.post('/process', async (req, res) => {
-  console.log("📞 Neue Spracheingabe erkannt");
-
   try {
-    const userText = await handleSpeechToText(req); // Deepgram integriert
+    const userText = await handleSpeechToText(req);
     console.log("🗣️ Kunde sagt:", userText);
 
     const gptReply = await generateGPTResponse(userText);
@@ -37,30 +31,27 @@ app.post('/process', async (req, res) => {
     const audioUrl = await generateSpeech(gptReply);
     console.log("🔊 Antwort-Audio:", audioUrl);
 
-    // Wiederholte Rückfrage – echter Dialog
     res.type('text/xml');
-    res.send(`
+    res.send(\`
       <Response>
         <Play>${audioUrl}</Play>
-        <Gather input="speech" action="/process" method="POST" timeout="6">
-          <Say>Haben Sie noch weitere Informationen für mich?</Say>
+        <Gather input="speech" action="/process" method="POST" timeout="8">
+          <Say voice="alice" language="de-DE">Haben Sie noch weitere Fragen?</Say>
         </Gather>
       </Response>
-    `);
-
+    \`);
   } catch (err) {
     console.error("❌ Fehler:", err);
     res.type('text/xml');
-    res.send(`
+    res.send(\`
       <Response>
-        <Say>Es gab einen Fehler bei der Verarbeitung. Bitte versuchen Sie es erneut.</Say>
+        <Say voice="alice" language="de-DE">Es gab einen Fehler. Bitte versuchen Sie es erneut.</Say>
       </Response>
-    `);
+    \`);
   }
 });
 
 const port = process.env.PORT || 10000;
 app.listen(port, () => {
-  console.log(`✅ Dialog-VoiceBot läuft auf Port ${port}`);
+  console.log(\`✅ VoiceBot läuft auf Port \${port}\`);
 });
-
