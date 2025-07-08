@@ -8,13 +8,17 @@ const { generateSpeech } = require('./services/elevenlabs');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-app.post('/incoming', (req, res) => {
-  res.type('text/xml');
+app.post("/incoming", (req, res) => {
+  res.type("text/xml");
   res.send(`
     <Response>
-      <Say voice="alice" language="de-DE">Willkommen bei StarBiker. Wie kann ich Ihnen helfen?</Say>
-      <Gather input="speech" action="/process" method="POST" timeout="8">
-        <Say voice="alice" language="de-DE">Bitte sagen Sie mir, was Sie brauchen.</Say>
+      <Say voice="Polly.Vicki" language="de-DE">
+        Willkommen bei StarBiker. Wie kann ich Ihnen helfen?
+      </Say>
+      <Gather input="speech" action="/process" method="POST" timeout="5">
+        <Say voice="Polly.Vicki" language="de-DE">
+          Bitte sagen Sie jetzt Ihr Anliegen.
+        </Say>
       </Gather>
     </Response>
   `);
