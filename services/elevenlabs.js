@@ -14,9 +14,8 @@ const voiceId = "21m00Tcm4TlvDq8ikWAM"; // Rachel
 async function generateSpeech(text) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
 
-  // 1. ElevenLabs Text-to-Speech anfordern
   const response = await axios.post(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+    \`https://api.elevenlabs.io/v1/text-to-speech/\${voiceId}\`,
     {
       text,
       voice_settings: {
@@ -33,20 +32,17 @@ async function generateSpeech(text) {
     }
   );
 
-  // 2. Temporär speichern
-  const fileName = `voice_${Date.now()}.mp3`;
+  const fileName = \`voice_\${Date.now()}.mp3\`;
   const filePath = path.join('/tmp', fileName);
   fs.writeFileSync(filePath, response.data);
 
-  // 3. In Cloudinary hochladen
   const uploadResult = await cloudinary.uploader.upload(filePath, {
-    resource_type: "video", // wichtig für MP3!
+    resource_type: "video",
     folder: "voicebot",
     public_id: fileName.replace('.mp3', ''),
     format: "mp3",
   });
 
-  // 4. URL zurückgeben
   return uploadResult.secure_url;
 }
 
