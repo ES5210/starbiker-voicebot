@@ -1,25 +1,34 @@
 const axios = require("axios");
+const { Deepgram } = require("@deepgram/sdk");
+
+const deepgram = new Deepgram(process.env.DEEPGRAM_API_KEY);
+
+// NEU: Twilio Credentials aus der .env Datei
+const twilioUsername = process.env.TWILIO_ACCOUNT_SID;
+const twilioPassword = process.env.TWILIO_AUTH_TOKEN;
 
 async function handleSpeechToText(recordingUrl) {
-  const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
+  try {
+    // Authentifizierter Abruf der Twilio-Aufnahme
+    const audioResponse = await axios.get(`${recordingUrl}.mp3`, {
+      auth: {
+        username: twilioUsername,
+        password: twilioPassword,
+      },
+      responseType: "arraybuffer",
+    });
 
-  const response = await axios({
-    method: "POST",
-    url: "https://api.deepgram.com/v1/listen",
-    headers: {
-      Authorization: `Token ${deepgramApiKey}`,
-      "Content-Type": "application/json"
-    },
-    data: {
-      url: `${recordingUrl}.mp3`, // Twilio gibt nur Base-URL zurück!
-      language: "de",
-      model: "nova",
-      smart_format: true
-    }
-  });
+    // Analyse durch Deepgram
+    const transcription = await deepgram.transcription.preRecorded(
+      { buffer: audioResponse.data, mimetype: "audio/mpeg" },
+      { punctuate: true, language: "de" }
+    );
 
-  const transcript = response.data.results.channels[0].alternatives[0].transcript;
-  return transcript || "Keine Sprache erkannt";
+    return transcription.results.channels[0].alternatives[0].transcript;
+  } catch (error) {
+    console.error("🔴 Deepgram Fehler:", error.message);
+    throw error;
+  }
 }
 
 module.exports = { handleSpeechToText };
