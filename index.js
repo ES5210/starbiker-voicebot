@@ -28,7 +28,20 @@ app.post("/incoming", (req, res) => {
 // Route 2: Dialog fortsetzen /process
 app.post("/process", async (req, res) => {
   try {
-    const userSpeech = await handleSpeechToText(req.body);
+    const userSpeech = req.body?.SpeechResult;
+
+if (!userSpeech || userSpeech.trim() === "") {
+  console.log("❌ Kein SpeechResult empfangen – wiederhole die Frage.");
+
+  return res.type('text/xml').send(`
+    <Response>
+      <Say>Ich habe dich leider nicht verstanden. Bitte sag es nochmal.</Say>
+      <Gather input="speech" action="/process" method="POST" timeout="5">
+        <Say>Was kann ich für dich tun?</Say>
+      </Gather>
+    </Response>
+  `);
+}
     console.log("🗣️ Kunde sagt:", userSpeech);
 
     const gptAnswer = await generateGPTResponse(userSpeech);
