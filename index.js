@@ -8,65 +8,49 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-// Route 1: Startpunkt /incoming
+// 📞 Route 1: Start – nimmt auf und leitet weiter
 app.post("/incoming", (req, res) => {
   res.type("text/xml");
   res.send(`
     <Response>
       <Say voice="Polly.Vicki" language="de-DE">
-        Willkommen bei StarBiker. Wie kann ich Ihnen helfen?
+        Willkommen bei StarBiker. Bitte sprechen Sie nach dem Signalton.
       </Say>
-      <Gather input="speech" action="/process" method="POST" timeout="5" language="de-DE">
-        <Say voice="Polly.Vicki" language="de-DE">
-          Bitte sagen Sie jetzt Ihr Anliegen.
-        </Say>
-      </Gather>
+      <Record action="/process" method="POST" maxLength="15" playBeep="true" />
     </Response>
   `);
 });
 
-// Route 2: Dialog fortsetzen /process
+// 🔁 Route 2: verarbeitet Aufnahme + Antwort
 app.post("/process", async (req, res) => {
   try {
-    const userSpeech = req.body?.SpeechResult;
+    const recordingUrl = req.body.RecordingUrl;
+    if (!recordingUrl) throw new Error("Keine Aufnahme erhalten");
 
-if (!userSpeech || userSpeech.trim() === "") {
-  console.log("❌ Kein SpeechResult empfangen – wiederhole die Frage.");
+    console.log("📥 Aufnahme-URL:", recordingUrl);
 
-  return res.type('text/xml').send(`
-    <Response>
-      <Say>Ich habe dich leider nicht verstanden. Bitte sag es nochmal.</Say>
-      <Gather input="speech" action="/process" method="POST" timeout="5" language="de-DE">
-        <Say>Was kann ich für dich tun?</Say>
-      </Gather>
-    </Response>
-  `);
-}
-    console.log("🗣️ Kunde sagt:", userSpeech);
+    const userText = await handleSpeechToText(recordingUrl);
+    console.log("🗣️ Kunde sagt:", userText);
 
-    const gptAnswer = await generateGPTResponse(userSpeech);
+    const gptAnswer = await generateGPTResponse(userText);
     console.log("🤖 GPT antwortet:", gptAnswer);
 
     const mp3Url = await generateSpeech(gptAnswer);
-    console.log("🔊 Audio-URL:", mp3Url);
+    console.log("🔊 MP3-URL:", mp3Url);
 
     res.type("text/xml");
     res.send(`
       <Response>
         <Play>${mp3Url}</Play>
-        <Gather input="speech" action="/process" method="POST" timeout="5" language="de-DE">
-          <Say voice="Polly.Vicki" language="de-DE">
-            Ich höre zu.
-          </Say>
-        </Gather>
+        <Redirect>/incoming</Redirect>
       </Response>
     `);
   } catch (err) {
-    console.error("❌ Fehler im Prozess:", err.message);
+    console.error("❌ Fehler:", err.message);
     res.type("text/xml");
     res.send(`
       <Response>
-        <Say>Es gab ein Problem bei der Verarbeitung. Bitte versuchen Sie es später erneut.</Say>
+        <Say>Es gab ein Problem. Bitte versuchen Sie es später erneut.</Say>
       </Response>
     `);
   }
