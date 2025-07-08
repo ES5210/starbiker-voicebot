@@ -9,19 +9,19 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const voiceId = "21m00Tcm4TlvDq8ikWAM"; // Rachel
+const voiceId = "21m00Tcm4TlvDq8ikWAM"; // z. B. "Rachel"
 
 async function generateSpeech(text) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
 
   const response = await axios.post(
-    \`https://api.elevenlabs.io/v1/text-to-speech/\${voiceId}\`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
     {
       text,
       voice_settings: {
         stability: 0.4,
         similarity_boost: 0.8,
-      }
+      },
     },
     {
       headers: {
@@ -32,7 +32,7 @@ async function generateSpeech(text) {
     }
   );
 
-  const fileName = \`voice_\${Date.now()}.mp3\`;
+  const fileName = `voice_${Date.now()}.mp3`;
   const filePath = path.join('/tmp', fileName);
   fs.writeFileSync(filePath, response.data);
 
