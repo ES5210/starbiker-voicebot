@@ -1,5 +1,5 @@
-async function handleSpeechToText(audioBuffer) {
-  return "Ich brauche einen Termin für meine Ducati";
+async function handleSpeechToText() {
+  return "Ich möchte einen Service-Termin für meine Ducati buchen.";
 }
 
 module.exports = { handleSpeechToText };
