@@ -16,7 +16,7 @@ app.post("/incoming", (req, res) => {
       <Say voice="Polly.Vicki" language="de-DE">
         Willkommen bei StarBiker. Wie kann ich Ihnen helfen?
       </Say>
-      <Gather input="speech" action="/process" method="POST" timeout="5">
+      <Gather input="speech" action="/process" method="POST" timeout="5" language="de-DE">
         <Say voice="Polly.Vicki" language="de-DE">
           Bitte sagen Sie jetzt Ihr Anliegen.
         </Say>
@@ -36,7 +36,7 @@ if (!userSpeech || userSpeech.trim() === "") {
   return res.type('text/xml').send(`
     <Response>
       <Say>Ich habe dich leider nicht verstanden. Bitte sag es nochmal.</Say>
-      <Gather input="speech" action="/process" method="POST" timeout="5">
+      <Gather input="speech" action="/process" method="POST" timeout="5" language="de-DE">
         <Say>Was kann ich für dich tun?</Say>
       </Gather>
     </Response>
@@ -54,7 +54,7 @@ if (!userSpeech || userSpeech.trim() === "") {
     res.send(`
       <Response>
         <Play>${mp3Url}</Play>
-        <Gather input="speech" action="/process" method="POST" timeout="6">
+        <Gather input="speech" action="/process" method="POST" timeout="5" language="de-DE">
           <Say voice="Polly.Vicki" language="de-DE">
             Ich höre zu.
           </Say>
