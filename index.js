@@ -8,11 +8,11 @@ app.post('/incoming', (req, res) => {
   console.log('✅ Incoming call webhook triggered');
 
   res.type('text/xml');
-  res.send(\`
+  res.send(`
     <Response>
       <Say voice="alice" language="de-DE">Hallo! Dein StarBiker VoiceBot ist jetzt aktiv.</Say>
     </Response>
-  \`);
+  `);
 });
 
 const port = process.env.PORT || 3000;
