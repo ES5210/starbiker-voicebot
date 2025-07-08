@@ -11,7 +11,7 @@
   "express": "^4.18.2",
   "cloudinary": "^1.37.1",
   "form-data": "^4.0.0",
-  "openai": "^4.33.0"
+  "openai": "^4.33.0",
     "@deepgram/sdk": "^3.2.0"
 }
 }
