@@ -1,12 +1,19 @@
 const express = require('express');
 const app = express();
+
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// Test-Webhook für Twilio
+// Twilio Webhook
 app.post('/incoming', (req, res) => {
   console.log('✅ Incoming call webhook triggered');
-  res.set('Content-Type', 'text/xml');
-  res.send(`<Response><Say voice="Polly.Marlene">Hallo! Dein StarBiker VoiceBot ist verbunden.</Say></Response>`);
+
+  res.type('text/xml');
+  res.send(`
+    <Response>
+      <Say voice="alice" language="de-DE">Hallo! Dein StarBiker VoiceBot ist jetzt aktiv.</Say>
+    </Response>
+  `);
 });
 
 const port = process.env.PORT || 3000;
