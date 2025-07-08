@@ -1,11 +1,10 @@
 require("dotenv").config();
 const express = require("express");
-// usw.
-const express = require("express");
 const bodyParser = require("body-parser");
 const { handleSpeechToText } = require("./services/deepgram");
 const { generateGPTResponse } = require("./services/openai");
 const { generateSpeech } = require("./services/elevenlabs");
+
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
