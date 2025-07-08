@@ -1,7 +1,6 @@
 {
   "name": "starbiker-voicebot",
   "version": "1.0.0",
-  "description": "KI VoiceBot mit Twilio, OpenAI, Deepgram und ElevenLabs",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
