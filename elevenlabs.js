@@ -4,7 +4,7 @@ const path = require('path');
 
 async function generateSpeech(text) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  const voiceId = '21m00Tcm4TlvDq8ikWAM'; // Standard-Stimme
+  const voiceId = '21m00Tcm4TlvDq8ikWAM';
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
 
   const response = await axios.post(url, {
